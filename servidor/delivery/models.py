@@ -26,8 +26,9 @@ class Characteristic(models.Model):
 class Business(models.Model):
     identifier = models.CharField(max_length=20)
     name = models.CharField(max_length=20)
-    zone = models.ForeignKey(Zone, on_delete=models.PROTECT)
-    agreements = models.ManyToManyField(User, through='Agreement')
+    zone = models.ForeignKey(Zone, on_delete=models.SET_NULL, null=True)
+    user_agreements = models.ManyToManyField(User, through='UserBusinessAgreement', related_name='agreements')
+    business_agreements = models.ManyToManyField('Business', through='BusinessBusinessAgreement')
 
 
 class Delivery(Business):
@@ -78,11 +79,11 @@ class Product(models.Model):
 
 
 class StoreProduct(Product):
-    store = models.ForeignKey(Store, on_delete=models.CASCADE)
+    store = models.ForeignKey(Store, on_delete=models.CASCADE, related_name='products')
 
 
 class UserProduct(Product):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='products')
 
 
 class Treatment(models.Model):
@@ -92,8 +93,7 @@ class Treatment(models.Model):
 
 
 class Package(models.Model):
-    delivery_company = models.ForeignKey(Delivery, on_delete=models.CASCADE)
-    request = models.ForeignKey('Request', on_delete=models.CASCADE, null=True)
+    request = models.ForeignKey('Request', on_delete=models.CASCADE, null=True, related_name='packages')
     identifier = models.CharField(max_length=30)
     height = models.DecimalField(max_digits=4, decimal_places=2)
     weight = models.DecimalField(max_digits=5, decimal_places=2)
@@ -101,10 +101,6 @@ class Package(models.Model):
     length = models.DecimalField(max_digits=4, decimal_places=2)
     treatments = models.ManyToManyField(Treatment)
     products = models.ManyToManyField(Product)
-    handled_by = models.OneToOneField(
-        'Package', on_delete=models.PROTECT, null=True,
-    )
-
 
 class Address(models.Model):
     coordinates = models.CharField(max_length=30, null=True)
@@ -141,19 +137,19 @@ class Vehicle(models.Model):
 
 
 class UserVehicle(Vehicle):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='vehicles')
 
 
 class BusinessVehicle(Vehicle):
-    business = models.ForeignKey(Business, on_delete=models.CASCADE)
+    business = models.ForeignKey(Business, on_delete=models.CASCADE, related_name='vehicles')
 
 
 class BusinessAddress(Address):
-    business = models.ForeignKey(Business, on_delete=models.CASCADE)
+    business = models.ForeignKey(Business, on_delete=models.CASCADE, related_name='addresses')
 
 
 class UserAdress(Address):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='addresses')
 
 
 class DeliveryPerson(User):
@@ -163,7 +159,8 @@ class DeliveryPerson(User):
     is_working = models.BooleanField()
     worksFor = models.ManyToManyField(
         Business,
-        through='Contract'
+        through='Contract',
+        related_name='employees'
     )
 
 
@@ -176,13 +173,16 @@ class Request(models.Model):
     delivery_company = models.ForeignKey(
         Delivery, on_delete=models.CASCADE
     )
+    handled_by = models.OneToOneField(
+        'Request', on_delete=models.PROTECT, null=True, related_name='handles'
+    )
 
 
 class Step(models.Model):
     is_done = models.BooleanField()
     description = models.TextField()
     address = models.ForeignKey(Address, on_delete=models.SET_NULL, null=True)
-    request = models.ForeignKey(Request, on_delete=models.CASCADE)
+    request = models.ForeignKey(Request, on_delete=models.CASCADE, related_name='steps')
 
 
 class Rating(models.Model):
@@ -207,14 +207,24 @@ class Contract(models.Model):
         DeliveryPerson,
         on_delete=models.CASCADE
     )
-    business = models.ForeignKey(Business, on_delete=models.CASCADE)
+    business = models.ForeignKey(
+        Business,
+        on_delete=models.CASCADE
+    )
 
 
 class Schedule(Timespan):
-    contract = models.ForeignKey(Contract, on_delete=models.CASCADE)
+    contract = models.ForeignKey(Contract, on_delete=models.CASCADE, related_name='schedule')
 
 
-class Agreement(models.Model):
+class UserBusinessAgreement(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     business = models.ForeignKey(Business, on_delete=models.CASCADE)
+    is_accepted = models.BooleanField()
+
+
+class BusinessBusinessAgreement(models.Model):
+    source = models.ForeignKey(Business, on_delete=models.CASCADE)
+    target = models.ForeignKey(Business, on_delete=models.CASCADE, related_name='incoming_business_agreements')
+    description = models.TextField(blank=True)
     is_accepted = models.BooleanField()

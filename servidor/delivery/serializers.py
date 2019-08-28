@@ -1,28 +1,22 @@
 from rest_framework import serializers
-from delivery.models import *
+from delivery.models import UserBusinessAgreement, BusinessBusinessAgreement, UserProduct, UserAdress, User, Zone, Characteristic, BusinessVehicle, BusinessAddress, Delivery, Service, StoreProduct, Store, Product, Package, Address, Position, Vehicle, DeliveryPerson, Rating, Step, Request, Timespan, Schedule, Contract
+
+
+class ProductSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Product
+        fields = '__all__'
 
 
 class UserSerializer(serializers.ModelSerializer):
-    agreements = serializers.PrimaryKeyRelatedField(
+    products = ProductSerializer(
         many=True,
-        queryset=Agreement.objects.all()  # pylint: disable=no-member
     )
-    products = serializers.PrimaryKeyRelatedField(
-        many=True,
-        queryset=UserProduct.objects.all()  # pylint: disable=no-member
-    )
-
-    addresses = serializers.PrimaryKeyRelatedField(
-        many=True,
-        queryset=UserAdress.objects.all()  # pylint: disable=no-member
-    )
-
-    addresses = serializers.PrimaryKeyRelatedField
 
     class Meta:
         model = User
-        fields = ['username', 'first_name', 'last_name', 'email',
-                  'phone_number', 'identifier', 'agreements', 'products', 'is_email_verified']
+        fields = ['username', 'first_name', 'last_name', 'email', 'phone_number',
+                  'identifier', 'agreements', 'products', 'addresses', 'vehicles', 'is_email_verified']
 
 
 class ZoneSerializer(serializers.ModelSerializer):
@@ -37,20 +31,23 @@ class CharacteristicSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+class UserAgreementSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserBusinessAgreement
+        fields = '__all__'
+
+
+class BusinessAgreementSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BusinessBusinessAgreement
+        fields = '__all__'
+
+
 class DeliverySerializer(serializers.ModelSerializer):
-    vehicles = serializers.PrimaryKeyRelatedField(
-        many=True,
-        queryset=BusinessVehicle.objects.all()  # pylint: disable=no-member
-    )
-
-    addresses = serializers.PrimaryKeyRelatedField(
-        many=True,
-        queryset=BusinessAddress.objects.all()  # pylint: disable=no-member
-    )
-
     class Meta:
         model = Delivery
-        fields = '__all__'
+        fields = ['identifier', 'name', 'is_exclusive', 'zone', 'user_agreements', 'business_agreements',
+                  'incoming_business_agreements', 'characteristics', 'addresses', 'vehicles', 'employees']
 
 
 class ServiceSerializer(serializers.ModelSerializer):
@@ -60,36 +57,20 @@ class ServiceSerializer(serializers.ModelSerializer):
 
 
 class StoreSerializer(serializers.ModelSerializer):
-    products = serializers.PrimaryKeyRelatedField(
+    products = ProductSerializer(
         many=True,
-        queryset=StoreProduct.objects.all()  # pylint: disable=no-member
-    )
-
-    vehicles = serializers.PrimaryKeyRelatedField(
-        many=True,
-        queryset=BusinessVehicle.objects.all()  # pylint: disable=no-member
-    )
-
-    addresses = serializers.PrimaryKeyRelatedField(
-        many=True,
-        queryset=BusinessAddress.objects.all()  # pylint: disable=no-member
     )
 
     class Meta:
         model = Store
-        fields = '__all__'
-
-
-class ProductSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Product
-        fields = '__all__'
+        fields = ['identifier', 'name', 'zone', 'user_agreements', 'business_agreements',
+                  'incoming_business_agreements', 'addresses', 'vehicles', 'employees', 'products']
 
 
 class PackageSerializer(serializers.ModelSerializer):
     class Meta:
         model = Package
-        fields = '__all__'
+        exclude = ['request']
 
 
 class AddressSerializer(serializers.ModelSerializer):
@@ -126,36 +107,52 @@ class RatingSerializer(serializers.ModelSerializer):
         exclude = ['request']
 
 
+class StepSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Step
+        exclude = ['request']
+
+
 class RequestSerializer(serializers.ModelSerializer):
-    steps = serializers.PrimaryKeyRelatedField(
+    steps = StepSerializer(
         many=True,
-        queryset=Step.objects.all()  # pylint: disable=no-member
-    )
-    packages = serializers.PrimaryKeyRelatedField(
-        many=True,
-        queryset=Package.objects.all()  # pylint: disable=no-member
+        read_only=True
     )
 
-    rating = RatingSerializer()
+    rating = RatingSerializer(
+        read_only=True
+    )
+
+    packages = PackageSerializer(
+        many=True,
+        read_only=True
+    )
+
+    #Hacer el handles
 
     class Meta:
         model = Request
         fields = '__all__'
 
 
-class StepSerializer(serializers.ModelSerializer):
+class TimespanSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Step
+        model = Timespan
         fields = '__all__'
 
-class TimespanSerializer(serializers.ModelSerializer):
-    pass
-
-class ContractSerializer(serializers.ModelSerializer):
-    pass
 
 class ScheduleSerializer(serializers.ModelSerializer):
-    pass
+    class Meta:
+        model = Schedule
+        exclude = ['contract']
 
-class AgreementSerializer(serializers.ModelSerializer):
-    pass
+
+class ContractSerializer(serializers.ModelSerializer):
+    schedule = ScheduleSerializer(
+        many=True,
+        read_only=True
+    )
+
+    class Meta:
+        model = Contract
+        fields = ['schedule', 'delivery_person', 'business']
