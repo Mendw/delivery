@@ -128,7 +128,10 @@ class RequestSerializer(serializers.ModelSerializer):
         read_only=True
     )
 
-    #Hacer el handles
+    handles = serializers.HyperlinkedRelatedField(
+        view_name='request-details',
+        read_only=True
+    )
 
     class Meta:
         model = Request
