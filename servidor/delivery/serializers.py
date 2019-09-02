@@ -1,11 +1,40 @@
 from rest_framework import serializers
-from delivery.models import UserBusinessAgreement, BusinessBusinessAgreement, UserProduct, UserAdress, User, Zone, Characteristic, BusinessVehicle, BusinessAddress, Delivery, Service, StoreProduct, Store, Product, Package, Address, Position, Vehicle, DeliveryPerson, Rating, Step, Request, Timespan, Schedule, Contract
+from django.contrib.sites.shortcuts import get_current_site
+from django.template.loader import render_to_string
+from delivery.models import (
+    UserBusinessAgreement, BusinessBusinessAgreement,
+    UserProduct, UserAdress, User, Zone, Characteristic,
+    BusinessVehicle, BusinessAddress, Delivery, Service,
+    StoreProduct, Store, Product, Package, Address, Position,
+    Vehicle, DeliveryPerson, Rating, Step, Request, Timespan,
+    Schedule, Contract, Note
+)
+
+from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_encode
+from delivery.tokens import account_activation_token
 
 
 class ProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = '__all__'
+
+
+class UserRegistrationSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True)
+
+    class Meta:
+        model = User
+        fields = ['username', 'password', 'first_name',
+                  'last_name', 'email', 'phone_number']
+
+    def create(self, validated_data):
+        user = super(UserRegistrationSerializer, self).create(validated_data)
+        user.set_password(validated_data['password'])
+        user.is_active = False
+        user.save()
+        return user
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -17,6 +46,13 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = ['username', 'first_name', 'last_name', 'email', 'phone_number',
                   'identifier', 'agreements', 'products', 'addresses', 'vehicles', 'is_email_verified']
+
+
+class UserOverviewSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['username', 'first_name',
+                  'last_name', 'email', 'phone_number']
 
 
 class ZoneSerializer(serializers.ModelSerializer):
@@ -159,3 +195,9 @@ class ContractSerializer(serializers.ModelSerializer):
     class Meta:
         model = Contract
         fields = ['schedule', 'delivery_person', 'business']
+
+
+class NoteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Note
+        fields = '__all__'

@@ -6,8 +6,8 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 
 
 class User(AbstractUser):
-    phone_number = models.CharField(max_length=31, null=True, default=None)
-    identifier = models.CharField(max_length=20, unique=True, null=True)
+    phone_number = models.CharField(max_length=31, null=True, default=None, blank=True)
+    identifier = models.CharField(max_length=20, unique=True, null=True, blank=True)
     is_email_verified = models.BooleanField(default=False)
 
 
@@ -228,3 +228,10 @@ class BusinessBusinessAgreement(models.Model):
     target = models.ForeignKey(Business, on_delete=models.CASCADE, related_name='incoming_business_agreements')
     description = models.TextField(blank=True)
     is_accepted = models.BooleanField()
+
+
+class Note(models.Model):
+    identifier = models.BigIntegerField(validators=[MinValueValidator(0)])
+    title = models.CharField(max_length=50)
+    description = models.TextField()
+    priority = models.PositiveIntegerField()
