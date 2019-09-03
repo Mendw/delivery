@@ -2,9 +2,18 @@
 
 from delivery.models import *
 from delivery.serializers import *
-from rest_framework import generics
 
 from django.contrib.auth.forms import UserCreationForm
+from django.utils.http import urlsafe_base64_decode
+from django.utils.encoding import force_text
+from django.contrib.auth import login
+
+from rest_framework.settings import api_settings
+from rest_framework.response import Response
+from rest_framework import generics
+from rest_framework import status
+
+from django.shortcuts import render, redirect
 
 
 class Registration(generics.CreateAPIView):
@@ -12,6 +21,10 @@ class Registration(generics.CreateAPIView):
     serializer_class = UserRegistrationSerializer
 
     def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+
         user.email_user('Activate your -El Menu- account', render_to_string(
             'confirmation-email.html', {
                 'user': user,
@@ -20,7 +33,32 @@ class Registration(generics.CreateAPIView):
                 'token': account_activation_token.make_token(user),
             }
         ))
-        return super.post(request, *args, **kwargs)
+
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+    def get_success_headers(self, data):
+        try:
+            return {'Location': str(data[api_settings.URL_FIELD_NAME])}
+        except (TypeError, KeyError):
+            return {}
+
+
+def activate(request, uidb64, token):
+    try:
+        uid = force_text(urlsafe_base64_decode(uidb64))
+        user = User.objects.get(pk=uid)
+    except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+        user = None
+
+    if user is not None and account_activation_token.check_token(user, token):
+        user.is_active = True
+        user.is_email_verified = True
+        user.save()
+        login(request, user)
+        return redirect('home')
+    else:
+        return render(request, 'account_activation_invalid.html')
 
 
 class UserList(generics.ListAPIView):

@@ -58,7 +58,7 @@ ROOT_URLCONF = 'servidor.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [os.path.join(BASE_DIR, 'templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -78,6 +78,14 @@ REST_FRAMEWORK = {
 }
 
 WSGI_APPLICATION = 'servidor.wsgi.application'
+
+#EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_HOST_USER = 'jomendoza18@gmail.com'
+EMAIL_HOST_PASSWORD = 'gdIaRaAPAqQHSXnMtfuSxFPFW'
+EMAIL_USE_TLS = True
 
 
 # Database
